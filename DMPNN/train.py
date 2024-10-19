@@ -249,7 +249,7 @@ def main(args):
     test_loader = DataLoader(dataset, batch_size=args.bath_size, sampler=test_sampler, 
                              num_workers=10, pin_memory=True, persistent_workers=True)
 
-    gnn = MPNNPredictor(node_in_feats=8, edge_in_feats=4, node_out_feats=64, edge_hidden_feats=128, num_step_message_passing=6)
+    gnn = MPNNPredictor(node_in_feats=8, edge_in_feats=4, node_out_feats=300, edge_hidden_feats=256, num_step_message_passing=6)
     gnn = gnn.to(device)
 
     model = predict_model(gnn, mc_iteration=args.mc_iteration)
