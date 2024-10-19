@@ -1,0 +1,8 @@
+/.vscode
+/MPNN.err
+/MPNN.out
+/Notebooks
+/lightning_logs
+/model.pth
+/requirements.txt
+/runjob.sh
