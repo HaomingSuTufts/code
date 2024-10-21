@@ -46,6 +46,22 @@ class DMPNN(nn.Module):
         return node_attr
 
 
+class MPNNEncoder(nn.Module):
+    def __init__(self, node_in_feats : int , edge_in_feats : int, 
+                    node_out_feats:int = 300, edge_hidden_feats:int = 256,
+                    num_step_message_passing:int = 6, **kwargs):
+        super(MPNNEncoder, self).__init__()
+        self.gnn = DMPNN(node_in_feats, edge_in_feats, node_out_feats, edge_hidden_feats, num_step_message_passing)
+        self.pool = aggr.Set2Set(node_out_feats, processing_steps=3)
+    
+
+    def forward(self, data):
+            x = self.gnn(data)
+            x = self.pool(x, data.batch)
+            
+
+            return x
+    
 class MPNNPredictor(nn.Module):
     def __init__(self, node_in_feats : int , edge_in_feats : int, 
                     node_out_feats:int = 64, edge_hidden_feats:int = 128,

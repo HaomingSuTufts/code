@@ -14,8 +14,9 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+'''
 sys.path.append('/cluster/tufts/dinglab/hsu02/code/DMPNN')
-
+'''
 
 from model import MPNNPredictor
 from dataset import FreeSolvDataset
@@ -261,8 +262,8 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--split_type", type=str, default='random')
     argparser.add_argument("--seed", type=int, default=114)
-    argparser.add_argument("--epochs", type=int, default=10000)    
-    argparser.add_argument("--mc_iteration", type=int, default=50)
+    argparser.add_argument("--epochs", type=int, default=100)    
+    argparser.add_argument("--mc_iteration", type=int, default=1)
     argparser.add_argument("--bath_size", type=int, default=32)
     args = argparser.parse_args()
     main(args)
