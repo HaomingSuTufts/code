@@ -14,8 +14,9 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+'''
 sys.path.append('/cluster/tufts/dinglab/hsu02/code/DMPNN')
-
+'''
 
 from model import MPNNPredictor
 from dataset import FreeSolvDataset
@@ -66,15 +67,13 @@ def mc_loss(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
 
 
 class predict_model(pl.LightningModule):
-    def __init__(self, model, mc_iteration: int = 10, test_task='explain', *args, **kwargs):
+    def __init__(self, model, test_task='explain', *args, **kwargs):
         super(predict_model, self).__init__()
         self.model = model
-        self.mc_iteration = mc_iteration
         self.test_task = test_task
         self.train_losses = []
         self.val_losses = []
         self.val_rmses = []
-        self.val_vars = []
 
     def forward(self, data):
         return self.model(data)
@@ -110,33 +109,24 @@ class predict_model(pl.LightningModule):
    
     
     def validation_step(self, batch, batch_idx):
-        self.model.dropout.train()
-        outputs = []
-        for _ in range(self.mc_iteration):
-            data = batch
-            pred = self.model(data)
-            outputs.append(pred)
-        outputs = torch.stack(outputs, dim=1)
-        mean_pred = torch.mean(outputs, dim=1)
-        var_pred = torch.var(outputs, dim=1)
-        loss = F.mse_loss(mean_pred, data.y.view(-1, 1))
+        data = batch
+        pred = self.model(data)
+        loss = F.mse_loss(pred, data.y.view(-1, 1))
         self.val_losses.append(loss)
-        mse = MeanSquaredError().to(self.device)
-        rmse = torch.sqrt(mse(mean_pred, data.y.view(-1, 1)))
+        rmse = torch.sqrt(F.mse_loss(data.y.view(-1, 1), pred))
         self.val_rmses.append(rmse)
-        self.val_vars.append(torch.mean(var_pred))
+
+
         return loss
     
     def on_validation_epoch_end(self) -> None:
         val_loss = torch.mean(torch.stack(self.val_losses))
         val_rmse = torch.mean(torch.stack(self.val_rmses))
-        val_var = torch.mean(torch.stack(self.val_vars))
 
-        metric = val_rmse/val_var
-        self.log("val_metric", metric)
+
         self.log("val_loss", val_loss)
         self.log("val_rmse", val_rmse)
-        self.log("val_var", val_var)
+   
      
 
         self.val_losses.clear()
@@ -208,7 +198,7 @@ class predict_model(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-5)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-5, weight_decay=1e-6)
         return optimizer
     
     
@@ -216,7 +206,8 @@ class predict_model(pl.LightningModule):
 
 def split_dataset(dataset: torch_geometric.data.Dataset, split: float = 0.8,split_type: str = 'random'):
     if split_type == 'random':
-        val_size = test_size = (1 - split) / 2
+        val_size = (1-split)
+        test_size = 0
         train_size = split
         num_data = len(dataset)
         indices = list(range(num_data))
@@ -227,7 +218,8 @@ def split_dataset(dataset: torch_geometric.data.Dataset, split: float = 0.8,spli
         return train_indices, val_indices, test_indices
     
     elif split_type == 'scaffold':
-        val_size = test_size = (1 - split) / 2
+        val_size = (1 - split)
+        test_size = 0
         train_indices, val_indices, test_indices = scaffold_split(dataset, val_size, test_size)
         return train_indices, val_indices, test_indices
     
@@ -249,7 +241,7 @@ def main(args):
     test_loader = DataLoader(dataset, batch_size=args.bath_size, sampler=test_sampler, 
                              num_workers=10, pin_memory=True, persistent_workers=True)
 
-    gnn = MPNNPredictor(node_in_feats=8, edge_in_feats=4, node_out_feats=300, edge_hidden_feats=256, num_step_message_passing=6)
+    gnn = MPNNPredictor(node_in_feats=8, edge_in_feats=4, node_out_feats=256, edge_hidden_feats=256, num_step_message_passing=6)
     gnn = gnn.to(device)
 
     model = predict_model(gnn, mc_iteration=args.mc_iteration)
@@ -261,9 +253,8 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--split_type", type=str, default='random')
     argparser.add_argument("--seed", type=int, default=114)
-    argparser.add_argument("--epochs", type=int, default=10000)    
-    argparser.add_argument("--mc_iteration", type=int, default=50)
-    argparser.add_argument("--bath_size", type=int, default=32)
+    argparser.add_argument("--epochs", type=int, default=10000)   
+    argparser.add_argument("--bath_size", type=int, default=128)
     args = argparser.parse_args()
     main(args)
 
