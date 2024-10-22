@@ -15,7 +15,9 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 '''
+'''
 sys.path.append('/cluster/tufts/dinglab/hsu02/code/DMPNN')
+'''
 '''
 
 from model import MPNNPredictor
