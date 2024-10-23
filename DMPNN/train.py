@@ -14,11 +14,8 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-'''
-'''
 sys.path.append('/cluster/tufts/dinglab/hsu02/code/DMPNN')
-'''
-'''
+
 
 from model import MPNNPredictor
 from dataset import FreeSolvDataset
@@ -35,7 +32,7 @@ import argparse
 from rdkit import Chem
 
 import tensorboard as tb
-from torchmetrics import MeanSquaredError
+
 
 
 def set_seed(seed: int) -> None:
@@ -133,7 +130,6 @@ class predict_model(pl.LightningModule):
 
         self.val_losses.clear()
         self.val_rmses.clear()
-        self.val_vars.clear()
         return super().on_validation_epoch_end()
     
     """    
@@ -154,6 +150,7 @@ class predict_model(pl.LightningModule):
         self.log("val_var", var, batch_size=data.y.size(0))
         return loss
     """
+    '''
 
     def test_step(self, batch, batch_idx):
         if self.test_task == 'explain':
@@ -197,11 +194,12 @@ class predict_model(pl.LightningModule):
             outputs = torch.stack(outputs, dim=1)
             return outputs, data.y.view(-1, 1)
 
-
+'''
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-5, weight_decay=1e-6)
-        return optimizer
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=1e-6)
+        return [optimizer], [lr_scheduler]
     
     
   
@@ -246,17 +244,16 @@ def main(args):
     gnn = MPNNPredictor(node_in_feats=8, edge_in_feats=4, node_out_feats=256, edge_hidden_feats=256, num_step_message_passing=6)
     gnn = gnn.to(device)
 
-    model = predict_model(gnn, mc_iteration=args.mc_iteration)
-    trainer = pl.Trainer(max_epochs=args.epochs, log_every_n_steps=10)
+    model = predict_model(gnn)
+    trainer = pl.Trainer(max_epochs=args.epochs)
     trainer.fit(model, train_loader, val_loader)
-    trainer.test(model, test_loader)
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--split_type", type=str, default='random')
     argparser.add_argument("--seed", type=int, default=114)
     argparser.add_argument("--epochs", type=int, default=10000)   
-    argparser.add_argument("--bath_size", type=int, default=128)
+    argparser.add_argument("--bath_size", type=int, default=256)
     args = argparser.parse_args()
     main(args)
 

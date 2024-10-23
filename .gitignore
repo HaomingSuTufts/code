@@ -1,8 +1,13 @@
 /.vscode
 /MPNN.err
 /MPNN.out
+/MPNNRF.err
+/MPNNRF.out
+/FreeSolv
+/results
 /Notebooks
 /lightning_logs
+/FEP_test
 /model.pth
 /requirements.txt
 /runjob.sh
